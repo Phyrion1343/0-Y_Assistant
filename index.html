@@ -1,1 +1,1538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>0-Y 展开器</title>
+    <style>
+        body { 
+            font-family: "Microsoft YaHei", "DengXian", "PingFang SC", "Noto Sans SC", sans-serif;
+            max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #f5f5f5;
+        }
+        h1, h2, h3 {
+            font-family: "Microsoft YaHei", "微软雅黑", "DengXian", "等线", "PingFang SC", "Noto Sans SC", sans-serif;
+            color: #333;
+            font-weight: 550;
+        }
+        h3 { font-size: 16px; margin-bottom: 8px; margin-top: 12px; }
+        .container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: visible;
+        }
+        .input-group { margin-bottom: 15px; }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 16px;
+            color: #333;
+        }
+        input[type="text"], input[type="number"] { font-size: 16px;width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #007BFF; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        button:hover { background-color: #0056b3; }
+        
+        .mode-selector { margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; }
+        .mode-selector label { display: inline-block; margin-right: 20px; font-weight: normal; cursor: pointer; }
+        .mode-selector input[type="radio"] { margin-right: 5px; }
+        
+        .result-section { margin-top: 15px; border-top: 1px solid #eee; padding-top: 12px; }
+        .result-box { 
+            background-color: #fff; 
+            border: 2px solid #ddd; 
+            padding: 15px; 
+            border-radius: 4px; 
+            font-family: "DengXian", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif; 
+            font-size: 20px; 
+            font-weight: bold; 
+            margin-bottom: 15px;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.8;
+        }
+        .result-box .num { 
+            cursor: pointer; 
+            transition: background-color 0.2s;
+        }
+        .result-box .num:hover { 
+            background-color: rgba(0, 123, 255, 0.1); 
+        }
+        
+        .mountain-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #555; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .mountain-scroll { 
+            overflow-x: auto; 
+            margin-bottom: 10px;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .scale-control { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: normal; }
+        .scale-control input[type="range"] { width: 150px; }
+        .scale-control span { min-width: 40px; }
+        
+        .save-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .save-buttons button { padding: 5px 10px; font-size: 14px; margin: 0; }
+        
+        .arrow-down { text-align: center; font-size: 24px; margin: 10px 0; color: #666; }
+        
+        .error { color: red; font-weight: bold; }
+        
+        .standard-check { 
+            background-color: #fff3cd; 
+            border: 1px solid #ffc107; 
+            padding: 15px; 
+            border-radius: 4px; 
+            margin-bottom: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .standard-process { 
+            font-family: "Microsoft YaHei", "DengXian", "PingFang SC", "Noto Sans SC", sans-serif;
+            font-size: 15px; line-height: 1.8; 
+        }
+        .success { color: green; font-weight: bold; }
+        .mountain-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 10px;
+            margin-bottom: 15px;
+        }
+        .mountain-buttons button {
+            padding: 5px 10px;
+            font-size: 14px;
+            margin: 0;
+        }
+        .input-group button {
+            padding: 5px 10px;
+            font-size: 14px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>0-Y 展开器</h1>
+    
+    <div class="input-group">
+        <label for="sequence">原序列 (用逗号或空格分隔)</label>
+        <input type="text" id="sequence" value="1,4,6,4" placeholder="例如: 1,4,6,4">
+        <button onclick="checkStandard()">标准式判断</button>
+    </div>
+
+    <div class="input-group">
+        <label for="repetitions">复制次数 (N)</label>
+        <input type="number" id="repetitions" value="3" min="1">
+    </div>
+
+    <div class="mode-selector">
+        <strong>展开模式：</strong>
+        <label>
+            <input type="radio" name="mode" value="normal" checked>
+            标准
+        </label>
+        <label>
+            <input type="radio" name="mode" value="i-mode">
+            无提升
+        </label>
+        <label>
+            <input type="radio" name="mode" value="direct-i-mode">
+            无提升(1,4,9,13,9提升)
+        </label>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+        <span id="calculation-status" role="status" aria-live="polite" style="color:#666;font-size:14px;"></span>
+        <button id="cancel-calculation" onclick="cancelCalculation()" hidden style="margin:0;padding:5px 12px;">停止计算</button>
+    </div>
+
+    <div id="output" class="result-section" style="display:none;">
+        <h3>最终结果（点击数字可截取）</h3>
+        <div id="final-result" class="result-box"></div>
+        
+        <div id="standard-result" class="standard-check" style="display:none;"></div>
+
+        <div class="mountain-title">
+            <span>山脉图</span>
+        </div>
+        <div class="mountain-buttons">
+            <button onclick="saveImage('mountain-before', '展开前山脉图')">保存展开前(.JPG)</button>
+            <button onclick="saveImage('mountain-after', '展开后山脉图')">保存展开后(.JPG)</button>
+            <button onclick="saveMergedImage()">合并保存(.JPG)</button>
+        </div>        
+        <div class="scale-control">
+            <label for="scale-slider">缩放:</label>
+            <input type="range" id="scale-slider" min="30" max="150" value="100" step="10">
+            <span id="scale-value">100%</span>
+        </div>
+        
+        <div class="mountain-scroll">
+            <svg id="mountain-before" style="display: block;"></svg>
+        </div>
+
+        <div class="arrow-down">↓</div>
+
+        <div class="mountain-scroll">
+            <svg id="mountain-after" style="display: block;"></svg>
+        </div>
+
+    </div>
+</div>
+
+<script id="core-source" type="text/plain">
+(function (host, factory) {
+  'use strict';
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else host.AncestralY = api;
+})(typeof globalThis === 'object' ? globalThis : this, function () {
+  'use strict';
+
+  const DEFAULTS = Object.freeze({ maxWork: 5000000, maxRows: 256,
+    maxColumns: 2048, maxCandidates: 128, maxTrials: 50000, maxDescentSteps: 2000 });
+  class LimitError extends Error {
+    constructor(code, message) { super(message); this.code = code; }
+  }
+  class InputError extends Error {}
+
+  function context(options) {
+    const limits = Object.assign({}, DEFAULTS, options || {});
+    for (const k of Object.keys(DEFAULTS)) {
+      if (!Number.isSafeInteger(limits[k]) || limits[k] < 1) throw new InputError(k + ' 必须是正安全整数');
+    }
+    return { limits, work: 0, trials: 0, phase: 'input',
+      tick(n) {
+        this.work += n === undefined ? 1 : n;
+        if (this.work > this.limits.maxWork) throw new LimitError('work-budget', '计算预算耗尽，搜索或证书尚未完成');
+      }
+    };
+  }
+  function validate(sequence, n, ctx) {
+    if (!Array.isArray(sequence)) throw new InputError('表达式必须是数组；零用 [] 表示');
+    if (!Number.isSafeInteger(n) || n < 0) throw new InputError('复制次数 N 必须是非负安全整数');
+    if (sequence.length && sequence[0] !== 1) throw new InputError('非空 0-Y 表达式首项必须是 1');
+    for (const value of sequence) {
+      ctx.tick();
+      if (!Number.isSafeInteger(value) || value < 1) throw new InputError('所有项必须是正安全整数');
+    }
+    checkWidth(sequence.length, ctx);
+  }
+  function checkWidth(width, ctx) {
+    if (!Number.isSafeInteger(width) || width > ctx.limits.maxColumns) {
+      throw new LimitError('column-limit', '项数超过上限，计算未完成');
+    }
+  }
+  function safeSum(a, b) {
+    const value = a + b;
+    if (!Number.isSafeInteger(value) || value < 1) throw new LimitError('integer-overflow', '展开超过精确正整数范围，计算未完成');
+    return value;
+  }
+
+  // 每次从底行重新规范建山。全部列无父边才停止；不按末列提前停止。
+  function mountain(sequence, ctx) {
+    if (!sequence.length) return { rows: [], height: 0, width: 0 };
+    const first = sequence.slice(), parents = new Array(first.length).fill(-1), stack = [];
+    for (let i = 0; i < first.length; i++) {
+      ctx.tick();
+      while (stack.length && first[stack[stack.length - 1]] >= first[i]) { stack.pop(); ctx.tick(); }
+      if (stack.length) parents[i] = stack[stack.length - 1];
+      stack.push(i);
+    }
+    const rows = [{ values: first, parents }];
+    while (rows[rows.length - 1].parents.some(p => p >= 0)) {
+      if (rows.length >= ctx.limits.maxRows) throw new LimitError('row-limit', '完整差分山脉行数超过上限，计算未完成');
+      const previous = rows[rows.length - 1], values = [], nextParents = [];
+      for (let i = 0; i < first.length; i++) {
+        ctx.tick();
+        const p = previous.parents[i];
+        const value = p < 0 ? previous.values[i] : previous.values[i] - previous.values[p];
+        if (!Number.isSafeInteger(value) || value < 1) throw new LimitError('invalid-difference', '差分不在精确正整数范围');
+        values.push(value);
+      }
+      for (let i = 0; i < first.length; i++) {
+        ctx.tick();
+        let p = previous.parents[i];
+        while (p >= 0 && values[p] >= values[i]) { p = previous.parents[p]; ctx.tick(); }
+        nextParents.push(p);
+      }
+      rows.push({ values, parents: nextParents });
+    }
+    return { rows, height: rows.length, width: first.length };
+  }
+
+  function strictAncestors(parents, i, ctx) {
+    const chain = [];
+    for (let p = parents[i]; p >= 0; p = parents[p]) { ctx.tick(); chain.push(p); }
+    return chain;
+  }
+
+  function prepare(sequence, n, ctx) {
+    validate(sequence, n, ctx);
+    ctx.phase = 'input-mountain';
+    const inputMountain = mountain(sequence, ctx), x = sequence.length - 1;
+    if (x < 0 || inputMountain.rows[0].parents[x] < 0 || n === 0) {
+      return { input: sequence.slice(), n, x, y: -1, length: 0, level: -1,
+        inputMountain, candidates: [], trivial: true };
+    }
+    let level = -1, y = -1;
+    for (let r = 0; r < inputMountain.height; r++) {
+      ctx.tick(); const row = inputMountain.rows[r], p = row.parents[x];
+      if (p >= 0 && row.values[x] - row.values[p] === 1) { level = r; y = p; break; }
+    }
+    if (level < 0) throw new Error('内部错误：合法极限式未找到坏根');
+    const candidates = [];
+    for (let r = 1; r < level; r++) {
+      const ancestors = new Set(strictAncestors(inputMountain.rows[r - 1].parents, x, ctx));
+      for (let p = y + 1; p < x; p++) {
+        ctx.tick();
+        // Direct-root variant: only an edge whose original parent is the bad root may be additionally frozen.
+        // Ordinary edges with parent < y are already stationary; interior parents > y keep translating.
+        if (!ancestors.has(p) && inputMountain.rows[r].parents[p] === y) candidates.push({ row: r, column: p });
+      }
+    }
+    return { input: sequence.slice(), n, x, y, length: x - y, level, inputMountain, candidates, trivial: false };
+  }
+
+  function expand(plan, edges, ctx, details) {
+    if (plan.trivial) {
+      const result = plan.input.slice(0, -1);
+      return details ? { result, rows: [] } : result;
+    }
+    const { x, y, length: L, n: N, level, inputMountain } = plan;
+    const width = x + N * L; checkWidth(width, ctx);
+    const frozen = new Set(edges.map(e => e.row + ',' + e.column));
+    const rows = [], allParents = [];
+    for (let r = 0; r <= level; r++) {
+      const oldParents = inputMountain.rows[r].parents, parents = new Array(width).fill(-1);
+      for (let j = 0; j < x; j++) { ctx.tick(); parents[j] = oldParents[j]; }
+      for (let j = x; j < width; j++) {
+        ctx.tick();
+        const phase = (j - x) % L;
+        const originalColumn = phase === 0 ? x : y + phase;
+        const copy = phase === 0 ? (j - x) / L : Math.floor((j - x) / L) + 1;
+        const oldParent = oldParents[originalColumn];
+        parents[j] = oldParent < y || frozen.has(r + ',' + originalColumn) ? oldParent : oldParent + copy * L;
+      }
+      allParents.push(parents);
+    }
+    const top = inputMountain.rows[level].values;
+    rows[level] = new Array(width);
+    for (let j = 0; j < width; j++) { ctx.tick(); rows[level][j] = j < x ? top[j] : top[y + (j - x) % L]; }
+    for (let r = level - 1; r >= 0; r--) {
+      const values = new Array(width);
+      for (let j = 0; j < width; j++) {
+        ctx.tick(); const p = allParents[r][j];
+        values[j] = safeSum(p < 0 ? 0 : values[p], rows[r + 1][j]);
+      }
+      rows[r] = values;
+    }
+    return details ? { result: rows[0], rows: rows.map((values, r) => ({ values, parents: allParents[r] })) } : rows[0];
+  }
+
+  // 一阶段来源证书：两份共同后续块决定每相位父指针的仿射模板。
+  // 它只证明 C(A,F,n+1)=E(B,n)，不证明所有参数都满足祖先包含。
+  function verifySource(plan, selected, ctx) {
+    ctx.phase = 'source-candidate-three-blocks';
+    const candidate = expand({ ...plan, n: 3 }, selected, ctx, true);
+    const source = candidate.result.slice(0, plan.x + plan.length + 1);
+    source[source.length - 1] = safeSum(source[source.length - 1], 1);
+    ctx.phase = 'source-mountain';
+    const sourcePlan = prepare(source, 2, ctx);
+    const certificate = { status: 'rejected', accepted: false, kind: 'two-block-affine-source',
+      source, root: { row: sourcePlan.level, column: sourcePlan.y, length: sourcePlan.length },
+      expansionHeight: sourcePlan.level + 1, sourceLength: source.length,
+      comparedValues: 0, comparedParents: 0, firstFailure: null };
+    if (sourcePlan.trivial || sourcePlan.y !== plan.x || sourcePlan.length !== plan.length || sourcePlan.level !== plan.level) {
+      certificate.firstFailure = { kind: 'root-or-height', expected: { row: plan.level, column: plan.x, length: plan.length }, actual: certificate.root };
+      return { certificate, mountain: sourcePlan.inputMountain };
+    }
+    ctx.phase = 'source-two-blocks';
+    const downstream = expand(sourcePlan, [], ctx, true);
+    ctx.phase = 'source-affine-certificate';
+    if (candidate.rows.length !== downstream.rows.length || candidate.result.length !== downstream.result.length) {
+      certificate.firstFailure = { kind: 'shape', candidateRows: candidate.rows.length,
+        sourceRows: downstream.rows.length, candidateWidth: candidate.result.length, sourceWidth: downstream.result.length };
+      return { certificate, mountain: sourcePlan.inputMountain };
+    }
+    for (let r = 0; r < candidate.rows.length; r++) {
+      for (let column = 0; column < candidate.result.length; column++) {
+        ctx.tick(); certificate.comparedValues++;
+        const a = candidate.rows[r], b = downstream.rows[r];
+        if (a.values[column] !== b.values[column]) {
+          certificate.firstFailure = { kind: 'value', row: r, column, candidate: a.values[column], source: b.values[column] };
+          return { certificate, mountain: sourcePlan.inputMountain };
+        }
+        if (r < candidate.rows.length - 1) {
+          certificate.comparedParents++;
+          if (a.parents[column] !== b.parents[column]) {
+            certificate.firstFailure = { kind: 'parent', row: r, column, candidate: a.parents[column], source: b.parents[column] };
+            return { certificate, mountain: sourcePlan.inputMountain };
+          }
+        }
+      }
+    }
+    certificate.status = 'accepted'; certificate.accepted = true;
+    return { certificate, mountain: sourcePlan.inputMountain };
+  }
+
+  function compareSequences(a, b, ctx) {
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      ctx.tick();
+      if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+    }
+    return Math.sign(a.length - b.length);
+  }
+
+  // 寻找一条实际普通路径，不把字典序较小或“标准”当作可达证书。
+  // 贪心路线失败不排除其他路线；资源耗尽必须抛出 LimitError。
+  function ordinarySourcePath(start, target, ctx) {
+    let current = start.slice();
+    const steps = [];
+    function failed(reason, extra) {
+      return { status: 'route-failed', accepted: false, reason, stepCount: steps.length,
+        steps, target, stoppedAt: current, ...extra };
+    }
+    while (true) {
+      ctx.phase = 'ordinary-source-path';
+      const cmp = compareSequences(current, target, ctx);
+      if (cmp === 0) {
+        return steps.length ? { status: 'reached', accepted: true, target, steps,
+          stepCount: steps.length, strict: true } : failed('source-equals-input', {});
+      }
+      if (cmp < 0) return failed('route-below-target', {});
+      if (steps.length >= ctx.limits.maxDescentSteps) throw new LimitError('descent-step-limit', '普通下降路径步数达到上限，搜索未完成');
+      ctx.tick(current.length);
+      const zero = current.slice(0, -1);
+      let n = 0, next = zero;
+      if (compareSequences(zero, target, ctx) < 0) {
+        if (!current.length || current[current.length - 1] === 1) return failed('no-next-step-on-this-route', { blockingExpansion: { n: 0, result: zero } });
+        const plan = prepare(current, 1, ctx);
+        ctx.phase = 'ordinary-source-path';
+        const coveringN = Math.max(1, Math.ceil((target.length - plan.x) / plan.length));
+        let lo = 0, hi = 1, high = expand(plan, [], ctx);
+        while (compareSequences(high, target, ctx) < 0) {
+          // 后续复制保留此前全部项；长度达到目标后，较小的首差异已固定。
+          if (high.length >= target.length) return failed('no-next-step-on-this-route', { blockingExpansion: { n: hi, result: high } });
+          lo = hi; hi = Math.min(hi * 2, coveringN); high = expand({ ...plan, n: hi }, [], ctx);
+        }
+        while (hi - lo > 1) {
+          const mid = Math.floor((hi + lo) / 2), value = expand({ ...plan, n: mid }, [], ctx);
+          if (compareSequences(value, target, ctx) >= 0) { hi = mid; high = value; }
+          else lo = mid;
+        }
+        n = hi; next = high;
+      }
+      if (compareSequences(next, current, ctx) >= 0) throw new Error('内部错误：普通路径步骤未严格下降');
+      steps.push({ input: current, n, result: next });
+      current = next;
+    }
+  }
+
+  // 直接父边属于普通山脉严格祖先链，已蕴含候选所有祖先都包含其中。
+  function verify(candidate, ordinary, ctx) {
+    if (candidate.width !== ordinary.width) throw new Error('内部错误：证书两侧长度不同');
+    let checkedEdges = 0;
+    const rows = Math.max(candidate.height, ordinary.height);
+    for (let r = 0; r < rows; r++) {
+      const cr = candidate.rows[r], or = ordinary.rows[r];
+      if (!cr) continue;
+      for (let column = 0; column < candidate.width; column++) {
+        ctx.tick(); const p = cr.parents[column];
+        if (p < 0) continue;
+        checkedEdges++;
+        let q = or ? or.parents[column] : -1;
+        const chain = [];
+        while (q >= 0) { ctx.tick(); chain.push(q); if (q === p) break; q = or.parents[q]; }
+        if (q !== p) return { accepted: false, rows, checkedEdges,
+          firstFailure: { row: r, column, candidateParent: p, ordinaryAncestorChain: chain } };
+      }
+    }
+    return { accepted: true, rows, checkedEdges, firstFailure: null };
+  }
+
+  function normalizeEdges(edges, plan) {
+    if (!Array.isArray(edges)) throw new InputError('固定集必须是坐标数组');
+    const allowed = new Set(plan.candidates.map(e => e.row + ',' + e.column)), seen = new Set(), result = [];
+    for (const e of edges) {
+      const row = Array.isArray(e) ? e[0] : e && e.row;
+      const column = Array.isArray(e) ? e[1] : e && (e.column === undefined ? e.pos : e.column);
+      const key = row + ',' + column;
+      if (!Number.isSafeInteger(row) || !Number.isSafeInteger(column) || !allowed.has(key)) throw new InputError('固定位置不属于侧枝候选：' + key);
+      if (!seen.has(key)) { seen.add(key); result.push({ row, column }); }
+    }
+    result.sort((a, b) => a.row - b.row || a.column - b.column);
+    return result;
+  }
+
+  function baseRecord(plan) {
+    return { input: plan.input, n: plan.n, candidates: plan.candidates,
+      badRoot: { row: plan.level, column: plan.y, length: plan.length },
+      chosenF: null, ordinaryResult: null, candidateResult: null,
+      certificate: null, sourceCertificate: null, sourceMountain: null, descentCertificate: null, firstFailure: null,
+      mountains: { input: plan.inputMountain, ordinary: null, candidate: null } };
+  }
+  function run(sequence, n, edges, options, searchMode, requireSource) {
+    let ctx, record = { input: Array.isArray(sequence) ? sequence.slice() : sequence, n,
+      chosenF: null, ordinaryResult: null, candidateResult: null, certificate: null, firstFailure: null };
+    try {
+      ctx = context(options);
+      const plan = prepare(sequence, n, ctx); record = baseRecord(plan);
+      record.rule = requireSource ? 'direct-bad-root-freeze-with-certified-descent' : 'ancestry-only';
+      ctx.phase = 'ordinary-expansion';
+      record.ordinaryResult = expand(plan, [], ctx);
+      ctx.phase = 'ordinary-mountain';
+      const ordinary = mountain(record.ordinaryResult, ctx); record.mountains.ordinary = ordinary;
+      function trial(selected) {
+        if (++ctx.trials > ctx.limits.maxTrials) throw new LimitError('trial-limit', '候选检查次数达到上限，搜索未完成');
+        ctx.phase = 'candidate-expansion'; const result = expand(plan, selected, ctx);
+        ctx.phase = 'candidate-mountain'; const candidate = mountain(result, ctx);
+        ctx.phase = 'ancestor-certificate'; const certificate = verify(candidate, ordinary, ctx);
+        const source = requireSource && selected.length ? verifySource(plan, selected, ctx) : {
+          certificate: { status: 'not-applicable', accepted: true, reason: selected.length ? 'ancestry-only-mode' : 'ordinary-empty-freeze' }, mountain: null };
+        let descentCertificate;
+        if (!selected.length) {
+          descentCertificate = { kind: 'ordinary', accepted: true, coversAllN: true,
+            sourcePath: { status: 'not-applicable', reason: 'ordinary-empty-freeze' } };
+        } else if (certificate.accepted) {
+          descentCertificate = { kind: 'ancestor', accepted: true, coversAllN: false,
+            sourcePath: { status: 'not-needed', reason: 'current-N-ancestor-certificate-passed' } };
+        } else if (requireSource && source.certificate.accepted) {
+          const sourcePath = ordinarySourcePath(plan.input, source.certificate.source, ctx);
+          descentCertificate = { kind: sourcePath.accepted ? 'ordinary-source-path' : 'none',
+            accepted: sourcePath.accepted, coversAllN: sourcePath.accepted, sourcePath };
+          if (sourcePath.accepted) {
+            const finalInput = source.certificate.source, finalN = plan.n - 1;
+            const finalPlan = prepare(finalInput, finalN, ctx);
+            ctx.phase = 'ordinary-source-path-final-step';
+            const finalResult = expand(finalPlan, [], ctx);
+            if (compareSequences(finalResult, result, ctx) !== 0) throw new Error('内部错误：来源路径最后一步与实际候选不一致');
+            descentCertificate.finalStep = { input: finalInput, n: finalN, result: finalResult };
+          }
+        } else {
+          descentCertificate = { kind: 'none', accepted: false, coversAllN: false,
+            sourcePath: { status: 'not-attempted', reason: requireSource ? 'source-certificate-failed' : 'ancestry-only-mode' } };
+        }
+        return { selected: selected.map(e => ({ ...e })), result, candidate, certificate,
+          sourceCertificate: source.certificate, sourceMountain: source.mountain,
+          descentCertificate, accepted: descentCertificate.accepted && source.certificate.accepted };
+      }
+      function finish(t, status) {
+        record.status = status; record.chosenF = t.selected; record.candidateResult = t.result;
+        record.certificate = { kind: 'full-mountain-ancestor-subset', ...t.certificate };
+        record.sourceCertificate = t.sourceCertificate; record.sourceMountain = t.sourceMountain;
+        record.descentCertificate = t.descentCertificate;
+        record.firstFailure = t.certificate.firstFailure; record.mountains.candidate = t.candidate;
+        record.stats = { work: ctx.work, trials: ctx.trials };
+        return record;
+      }
+      if (!searchMode) {
+        const selected = normalizeEdges(edges, plan), t = trial(selected);
+        return finish(t, t.accepted ? (selected.length ? 'accepted' : 'ordinary') : 'rejected');
+      }
+      if (plan.candidates.length > ctx.limits.maxCandidates) throw new LimitError('candidate-limit', '侧枝候选数超过搜索上限，搜索未完成');
+      if (!plan.candidates.length) {
+        record.selection = 'lexicographic-minimum'; record.searchComplete = true;
+        return finish(trial([]), 'ordinary');
+      }
+      const full = trial(plan.candidates);
+      if (!full.accepted) record.firstRejected = { frozen: full.selected, certificate: full.certificate,
+        sourceCertificate: full.sourceCertificate, descentCertificate: full.descentCertificate };
+      let best = trial([]);
+      function better(a, b) {
+        for (let i = 0; i < a.result.length; i++) {
+          if (a.result[i] !== b.result[i]) return a.result[i] < b.result[i];
+        }
+        if (a.selected.length !== b.selected.length) return a.selected.length < b.selected.length;
+        for (let i = 0; i < a.selected.length; i++) {
+          if (a.selected[i].row !== b.selected[i].row) return a.selected[i].row < b.selected[i].row;
+          if (a.selected[i].column !== b.selected[i].column) return a.selected[i].column < b.selected[i].column;
+        }
+        return false;
+      }
+      if (full.accepted && better(full, best)) best = full;
+      const candidates = plan.candidates;
+      // 穷尽所有子集，选底行字典序最小者；同值优先更少冻结。
+      // 枚举按基数降序、坐标索引组合字典序；不使用32位位掩码。
+      // 全集通过也不能提前返回：没有假设它必为数值最小者。
+      function* combinations(size) {
+        const indices = Array.from({ length: size }, (_, i) => i);
+        while (true) {
+          ctx.tick(); yield indices.map(i => candidates[i]);
+          let p = size - 1;
+          while (p >= 0 && indices[p] === candidates.length - size + p) { p--; ctx.tick(); }
+          if (p < 0) return;
+          indices[p]++;
+          for (let j = p + 1; j < size; j++) indices[j] = indices[j - 1] + 1;
+        }
+      }
+      for (let size = candidates.length - 1; size > 0; size--) {
+        for (const selected of combinations(size)) {
+          const t = trial(selected);
+          if (t.accepted && better(t, best)) best = t;
+        }
+      }
+      record.selection = 'lexicographic-minimum'; record.searchComplete = true;
+      return finish(best, best.selected.length ? 'accepted' : 'ordinary');
+    } catch (error) {
+      if (!(error instanceof LimitError) && !(error instanceof InputError)) throw error;
+      record.status = error instanceof InputError ? 'invalid' : 'unknown';
+      record.error = { code: error.code || 'invalid-input', message: error.message, phase: ctx ? ctx.phase : 'options' };
+      record.chosenF = null; record.candidateResult = null; record.certificate = null;
+      record.sourceCertificate = null; record.sourceMountain = null;
+      record.descentCertificate = null;
+      record.stats = { work: ctx ? ctx.work : 0, trials: ctx ? ctx.trials : 0 };
+      return record;
+    }
+  }
+
+  return Object.freeze({ version: '0.4.1-direct-bad-root-freeze', freezePolicy: 'original-parent-equals-bad-root', defaults: DEFAULTS,
+    search: (sequence, n, options) => run(sequence, n, null, options, true, true),
+    sourceAndAncestry: (sequence, n, options) => run(sequence, n, null, options, true, true),
+    analyzeExplicit: (sequence, n, edges, options) => run(sequence, n, edges, options, false, true),
+    searchSafetyOnly: (sequence, n, options) => run(sequence, n, null, options, true, false),
+    analyzeExplicitSafetyOnly: (sequence, n, edges, options) => run(sequence, n, edges, options, false, false),
+    ordinary: (sequence, n, options) => run(sequence, n, [], options, false, false) });
+});
+
+</script>
+<script id="nolift-worker-source" type="text/plain">
+// Convert the chosen construction into the original expander's mountain drawing format.
+// The algorithm and its selection remain entirely in the unmodified v0.4 core above.
+function noLiftRecordToData(record) {
+    if (!['accepted', 'ordinary'].includes(record.status) || !record.searchComplete) {
+        throw new Error(record.error?.message || '无提升计算未完成。');
+    }
+    const { input, n: N, chosenF, candidateResult: result, badRoot, mountains } = record;
+    const level = badRoot.row, y = badRoot.column, x = input.length - 1, L = badRoot.length;
+    const data = {
+        result: result.slice(), n: N, badRootIndex: y, originalLastIndex: x,
+        badPartLength: L, specialPositions: [], matrixAfter: null,
+        matrixBefore: mountains.input.rows.slice(0, Math.max(1, level + 1))
+            .map(row => ({ seq: row.values.slice(), parents: row.parents.slice() })),
+        noLiftStatus: record.status
+    };
+    if (y < 0) return data;
+    const width = result.length, rows = [], parents = [];
+    const frozen = new Set(chosenF.map(edge => edge.row + ',' + edge.column));
+    for (let r = 0; r <= level; r++) {
+        const oldParents = mountains.input.rows[r].parents;
+        parents[r] = new Array(width).fill(-1);
+        data.specialPositions[r] = new Set(chosenF.filter(edge => edge.row === r).map(edge => edge.column));
+        for (let j = 0; j < x; j++) parents[r][j] = oldParents[j];
+        for (let j = x; j < width; j++) {
+            const phase = (j - x) % L;
+            const originalColumn = phase === 0 ? x : y + phase;
+            const copy = phase === 0 ? (j - x) / L : Math.floor((j - x) / L) + 1;
+            const oldParent = oldParents[originalColumn];
+            parents[r][j] = oldParent < y || frozen.has(r + ',' + originalColumn)
+                ? oldParent : oldParent + copy * L;
+        }
+    }
+    const top = mountains.input.rows[level].values;
+    rows[level] = Array.from({ length: width }, (_, j) => j < x ? top[j] : top[y + (j - x) % L]);
+    for (let r = level - 1; r >= 0; r--) {
+        rows[r] = new Array(width);
+        for (let j = 0; j < width; j++) {
+            const p = parents[r][j];
+            rows[r][j] = (p < 0 ? 0 : rows[r][p]) + rows[r + 1][j];
+        }
+    }
+    if (rows[0].length !== result.length || rows[0].some((value, i) => value !== result[i])) {
+        throw new Error('山脉图与展开结果不一致，已停止显示。');
+    }
+    data.matrixAfter = rows.map((seq, r) => ({ seq, parents: parents[r] }));
+    return data;
+}
+self.onmessage = function(event) {
+    try {
+        const { sequence, n } = event.data;
+        // Same budget as the v0.4 experimental HTML. Incomplete search is never an ordinary result.
+        const record = AncestralY.search(sequence, n, { maxWork: 50000000 });
+        if (!['accepted', 'ordinary'].includes(record.status) || !record.searchComplete) {
+            self.postMessage({ error: record.error?.message || '无提升计算未完成。', status: record.status });
+            return;
+        }
+        self.postMessage({ data: noLiftRecordToData(record) });
+    } catch (error) {
+        self.postMessage({ error: error.message });
+    }
+};
+</script>
+<script>
+    let currentScale = 1.0;
+    let currentData = null;
+    let noLiftWorker = null;
+    let calculationTimer = null;
+    let calculationVersion = 0;
+
+    function parseSequence(str) {
+        return str.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+    }
+
+    document.getElementById('sequence').addEventListener('input', calculateExpansion);
+    document.getElementById('repetitions').addEventListener('input', calculateExpansion);
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+        radio.addEventListener('change', calculateExpansion);
+    });
+
+    document.getElementById('scale-slider').addEventListener('input', function(e) {
+        currentScale = e.target.value / 100;
+        document.getElementById('scale-value').textContent = e.target.value + '%';
+        
+        if (currentData) {
+            const colorInfo = currentData.badRootIndex !== -1 ? {
+                y: currentData.badRootIndex,
+                x: currentData.originalLastIndex,
+                L: currentData.badPartLength,
+                N: currentData.n,
+                specialPositions: currentData.specialPositions
+            } : null;
+
+            drawMountain('mountain-before', currentData.matrixBefore, colorInfo, currentScale);
+            if (currentData.matrixAfter) {
+                drawMountain('mountain-after', currentData.matrixAfter, colorInfo, currentScale);
+            }
+        }
+    });
+
+    function truncateSequence(index) {
+        if (!currentData || !currentData.result) return;
+        
+        const truncated = currentData.result.slice(0, index + 1);
+        document.getElementById('sequence').value = truncated.join(',');
+        calculateExpansion();
+    }
+
+    function svgToHighQualityJpg(svg, callback) {
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        const scaleFactor = 3;
+        const baseWidth = parseFloat(svg.getAttribute('width'));
+        const baseHeight = parseFloat(svg.getAttribute('height'));
+        
+        canvas.width = baseWidth * scaleFactor;
+        canvas.height = baseHeight * scaleFactor;
+        
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            callback(canvas);
+        };
+        
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    }
+
+    function saveImage(svgId, filename) {
+        const svg = document.getElementById(svgId);
+        
+        svgToHighQualityJpg(svg, function(canvas) {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename + '.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 'image/jpeg', 0.95);
+        });
+    }
+
+    function saveMergedImage() {
+        const svgBefore = document.getElementById('mountain-before');
+        const svgAfter = document.getElementById('mountain-after');
+        
+        if (!svgBefore || !svgAfter) return;
+        
+        const scaleFactor = 3;
+        
+        const widthBefore = parseFloat(svgBefore.getAttribute('width'));
+        const widthAfter = parseFloat(svgAfter.getAttribute('width'));
+        const width = Math.max(widthBefore, widthAfter);
+        
+        const heightBefore = parseFloat(svgBefore.getAttribute('height'));
+        const heightAfter = parseFloat(svgAfter.getAttribute('height'));
+        const gap = 40 * currentScale;
+        const totalHeight = heightBefore + gap + heightAfter;
+        
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = width * scaleFactor;
+        canvas.height = totalHeight * scaleFactor;
+        
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        svgToHighQualityJpg(svgBefore, function(canvas1) {
+            ctx.drawImage(canvas1, 0, 0, widthBefore * scaleFactor, heightBefore * scaleFactor);
+            
+            ctx.font = (24 * currentScale * scaleFactor) + 'px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('↓', (width / 2) * scaleFactor, (heightBefore + gap / 2) * scaleFactor);
+            
+            svgToHighQualityJpg(svgAfter, function(canvas2) {
+                ctx.drawImage(canvas2, 0, (heightBefore + gap) * scaleFactor, widthAfter * scaleFactor, heightAfter * scaleFactor);
+                
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = '山脉图_合并.jpg';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 'image/jpeg', 0.95);
+            });
+        });
+    }
+
+    class ExpansionProcess {
+        constructor(initialSeq, n, iMode = false) {
+            this.rows = []; 
+            this.parents = []; 
+            this.initialSeq = initialSeq;
+            this.N = n;
+            this.badRootInfo = null;
+            this.iMode = iMode;
+            this.specialPositions = [];
+        }
+
+        getAncestorChain(seq, parentIndices, startIndex = -1) {
+            if (startIndex === -1) {
+                startIndex = seq.length - 1;
+            }
+            
+            let chain = [];
+            let current = startIndex;
+            while (true) {
+                let p = parentIndices[current];
+                if (p === -1) break;
+                chain.push(p);
+                current = p;
+            }
+            return chain;
+        }
+
+        calcNormalParents(seq) {
+            let p = new Array(seq.length).fill(-1);
+            for (let i = 0; i < seq.length; i++) {
+                for (let j = i - 1; j >= 0; j--) {
+                    if (seq[j] < seq[i]) {
+                        p[i] = j;
+                        break;
+                    }
+                }
+            }
+            return p;
+        }
+
+        calcDiffParents(seq, prevSeq, prevParents) {
+            let p = new Array(seq.length).fill(-1);
+            
+            for (let i = 0; i < seq.length; i++) {
+                let ancestorChain = this.getAncestorChain(prevSeq, prevParents, i);
+                let ancestorSet = new Set(ancestorChain);
+                
+                for (let j = i - 1; j >= 0; j--) {
+                    if (ancestorSet.has(j)) {
+                        if (seq[j] < seq[i]) {
+                            p[i] = j;
+                            break;
+                        }
+                    }
+                }
+            }
+            return p;
+        }
+
+        run() {
+            let currentSeq = [...this.initialSeq];
+            let rawParents = this.calcNormalParents(currentSeq);
+            let lastIdx = currentSeq.length - 1;
+            
+            if (rawParents[lastIdx] === -1) {
+                currentSeq.pop();
+                return { 
+                    result: currentSeq, 
+                    matrixBefore: [{seq: this.initialSeq, parents: rawParents}], 
+                    matrixAfter: null,
+                    badRootIndex: -1,
+                    specialPositions: []
+                };
+            }
+
+            this.rows.push(currentSeq);
+            this.parents.push(rawParents);
+            
+            let ancestorIndices = this.getAncestorChain(currentSeq, rawParents);
+            let ancestorChains = [ancestorIndices];
+
+            let level = 0;
+            while (true) {
+                let seq = this.rows[level];
+                let pars = this.parents[level];
+                let lastVal = seq[seq.length - 1];
+                let parentIdx = pars[seq.length - 1];
+                let parentVal = seq[parentIdx];
+                let diff = lastVal - parentVal;
+
+                if (diff === 1) {
+                    this.badRootInfo = { level: level, index: parentIdx, value: parentVal };
+                    break;
+                } else {
+                    let nextSeq = [];
+                    for(let k=0; k<seq.length; k++) {
+                        if (k === 0) {
+                            nextSeq.push(this.initialSeq[0]); 
+                        } else {
+                            if (pars[k] !== -1) {
+                                nextSeq.push(seq[k] - seq[pars[k]]);
+                            } else {
+                                nextSeq.push(seq[k]);
+                            }
+                        }
+                    }
+                    this.rows.push(nextSeq);
+                    
+                    let currentAncestorIndices = this.getAncestorChain(seq, pars);
+                    ancestorChains.push(currentAncestorIndices);
+                    
+                    let nextParents = this.calcDiffParents(nextSeq, seq, pars);
+                    this.parents.push(nextParents);
+                    level++;
+                }
+            }
+
+            let y = this.badRootInfo.index;
+            let x = this.rows[0].length - 1; 
+            let L = x - y;
+            let N = this.N;
+
+            let baseLen = x; 
+            let totalLen = baseLen + N * L;
+            let expandedParents = [];
+            
+            for (let r = 0; r < this.rows.length; r++) {
+                this.specialPositions.push(new Set());
+            }
+            
+            let noShiftPositions = new Set();
+            
+            if (this.iMode) {
+                
+                let candidatePositions = [];
+                
+                for (let r = 1; r < this.rows.length - 1; r++) {
+                    let ancestorSet = new Set(ancestorChains[r]);
+                    
+                    for (let p = y + 1; p < x; p++) {
+                        if (!ancestorSet.has(p)) {
+                            candidatePositions.push({row: r, pos: p});
+                        }
+                    }
+                }
+                
+                if (candidatePositions.length > 0) {
+                    
+                    let allSubsets = [];
+                    for (let mask = 1; mask < (1 << candidatePositions.length); mask++) {
+                        let subset = [];
+                        for (let i = 0; i < candidatePositions.length; i++) {
+                            if (mask & (1 << i)) {
+                                subset.push(candidatePositions[i]);
+                            }
+                        }
+                        allSubsets.push(subset);
+                    }
+                    
+                    
+                    allSubsets.sort((a, b) => b.length - a.length);
+                    
+                    let foundValidSubset = false;
+                    
+                    for (let subset of allSubsets) {
+                        let posSet = new Set(subset.map(p => `${p.row},${p.pos}`));
+                        
+                       
+                        let testN = 3;
+                        let testExpandedParents = this.buildExpandedParentsWithExceptions(y, x, L, testN, posSet);
+                        let testExpandedRows = this.buildExpandedSequence(testExpandedParents, y, x, L, testN);
+                        let testResult = testExpandedRows[0];
+                        
+                        
+                        let standardCheck = this.checkIfStandard(testResult);
+                        if (standardCheck.isStandard) {
+                            let sourceProcess = new ExpansionProcess(standardCheck.source, testN, false);
+                            let sourceResult = sourceProcess.run();
+                            
+                            if (sourceResult.matrixBefore && sourceProcess.badRootInfo) {
+                                let sourceY = sourceProcess.badRootInfo.index;
+                                let sourceX = standardCheck.source.length - 1;
+                                let sourceL = sourceX - sourceY;
+                                
+                                if (sourceL === L && sourceY === x) {
+                                                                        for (let p of subset) {
+                                        noShiftPositions.add(`${p.row},${p.pos}`);
+                                        this.specialPositions[p.row].add(p.pos);
+                                    }
+                                    foundValidSubset = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (let r = 0; r < this.rows.length; r++) {
+                let oldPars = this.parents[r];
+                let newPars = new Array(totalLen).fill(-1);
+
+                for (let i = y; i <= x; i++) {
+                    let oldParent = oldPars[i];
+                    
+                    if (!this.iMode) {
+                        if (oldParent !== -1 && oldParent < y && i > y && i < x) {
+                            this.specialPositions[r].add(i);
+                        }
+                    }
+                    
+                    for (let n = 0; n <= N; n++) {
+                        let targetIdx = i + n * L;
+                        
+                        if (targetIdx >= totalLen) break;
+                        
+                        if (oldParent === -1) {
+                            newPars[targetIdx] = -1;
+                        } else {
+                            let shouldNotShift = noShiftPositions.has(`${r},${i}`);
+                            
+                            if (oldParent < y || shouldNotShift) {
+                                newPars[targetIdx] = oldParent;
+                            } else {
+                                newPars[targetIdx] = oldParent + n * L;
+                            }
+                        }
+                    }
+                }
+                
+                for (let i = 0; i < y; i++) {
+                    newPars[i] = oldPars[i];
+                }
+                
+                expandedParents.push(newPars);
+            }
+
+            let expandedRows = this.buildExpandedSequence(expandedParents, y, x, L, N);
+            
+            let matrixDataBefore = this.rows.map((row, i) => {
+                return { seq: row, parents: this.parents[i] };
+            });
+            
+            let matrixDataAfter = expandedRows.map((row, i) => {
+                return { seq: row, parents: expandedParents[i] };
+            });
+
+            return {
+                result: expandedRows[0],
+                matrixBefore: matrixDataBefore,
+                matrixAfter: matrixDataAfter,
+                badRootIndex: y,
+                originalLastIndex: x,
+                badPartLength: L,
+                specialPositions: this.specialPositions
+            };
+        }
+
+        buildExpandedParentsWithExceptions(y, x, L, N, exceptionSet) {
+            let totalLen = x + N * L;
+            let expandedParents = [];
+            
+            for (let r = 0; r < this.rows.length; r++) {
+                let oldPars = this.parents[r];
+                let newPars = new Array(totalLen).fill(-1);
+        
+                for (let i = y; i <= x; i++) {
+                    let oldParent = oldPars[i];
+                    
+                    for (let n = 0; n <= N; n++) {
+                        let targetIdx = i + n * L;
+                        
+                        if (targetIdx >= totalLen) break;
+                        
+                        if (oldParent === -1) {
+                            newPars[targetIdx] = -1;
+                        } else {
+                            let shouldNotShift = exceptionSet.has(`${r},${i}`);
+                            
+                            if (oldParent < y || shouldNotShift) {
+                                newPars[targetIdx] = oldParent;
+                            } else {
+                                newPars[targetIdx] = oldParent + n * L;
+                            }
+                        }
+                    }
+                }
+                
+                for (let i = 0; i < y; i++) {
+                    newPars[i] = oldPars[i];
+                }
+                
+                expandedParents.push(newPars);
+            }
+            
+            return expandedParents;
+        }
+
+        buildExpandedSequence(expandedParents, y, x, L, N) {
+            let totalLen = x + N * L;
+            let lastRowIdx = this.rows.length - 1;
+            let lastRowSeq = this.rows[lastRowIdx];
+            let newLastRowSeq = [];
+
+            for (let i = 0; i < x; i++) {
+                newLastRowSeq.push(lastRowSeq[i]);
+            }
+
+            let badPart = lastRowSeq.slice(y, x);
+            for (let n = 0; n < N; n++) {
+                newLastRowSeq = newLastRowSeq.concat(badPart);
+            }
+            
+            let expandedRows = new Array(this.rows.length);
+            expandedRows[lastRowIdx] = newLastRowSeq;
+
+            for (let r = lastRowIdx - 1; r >= 0; r--) {
+                let currentRowLen = expandedParents[r].length;
+                let newRow = new Array(currentRowLen).fill(0);
+                let currentPars = expandedParents[r];
+                let nextRowDiff = expandedRows[r + 1]; 
+
+                newRow[0] = this.initialSeq[0];
+
+                for (let i = 1; i < currentRowLen; i++) {
+                    let parentIdx = currentPars[i];
+                    let diffVal = nextRowDiff[i]; 
+                    
+                    let parentVal = 0;
+                    if (parentIdx !== -1) {
+                        parentVal = newRow[parentIdx]; 
+                    }
+                    newRow[i] = parentVal + diffVal;
+                }
+                expandedRows[r] = newRow;
+            }
+            
+            return expandedRows;
+        }
+
+        checkIfStandard(seq) {
+            if (seq.length === 2 && seq[0] === 1) {
+                return { isStandard: true, source: seq };
+            }
+            
+            if (seq[0] !== 1) {
+                return { isStandard: false };
+            }
+            
+            let currentSeq = [1, seq[1] + 1];
+            let checkIndex = 2;
+            
+            let maxSteps = 500;
+            let stepCount = 0;
+            
+            while (checkIndex <= seq.length && stepCount < maxSteps) {
+                stepCount++;
+                
+                let targetLen = checkIndex;
+                let n = Math.max(1, targetLen - currentSeq.length + 5);
+                
+                try {
+                    let process = new ExpansionProcess(currentSeq, n, false);
+                    let result = process.run();
+                    let expanded = result.result;
+                    
+                    let truncated = expanded.slice(0, checkIndex);
+                    
+                    if (truncated.length < checkIndex) {
+                        return { isStandard: false };
+                    }
+                    
+                    let lastVal = truncated[checkIndex - 1];
+                    let targetVal = seq[checkIndex - 1];
+                    
+                    if (lastVal < targetVal) {
+                        return { isStandard: false };
+                    } else if (lastVal === targetVal) {
+                        if (checkIndex === seq.length) {
+                            return { isStandard: true, source: currentSeq };
+                        }
+                        checkIndex++;
+                    } else {
+                        currentSeq = seq.slice(0, checkIndex - 1);
+                        currentSeq.push(targetVal + 1);
+                    }
+                } catch (e) {
+                    return { isStandard: false };
+                }
+            }
+            
+            return { isStandard: false };
+        }
+    }
+
+    function getColorForIndex(idx, y, x, L, N, specialPositions = null, rowIndex = 0) {
+        if (specialPositions && specialPositions[rowIndex]) {
+            for (let p of specialPositions[rowIndex]) {
+                for (let n = 0; n <= N; n++) {
+                    if (idx === p + n * L) {
+                        return '#a855f7';
+                    }
+                }
+            }
+        }
+        
+        if (idx < y) {
+            return '#22c55e';
+        }
+        
+        if (idx === y) {
+            return '#ef4444';
+        }
+        
+        if (idx > y && idx < x) {
+            return '#333';
+        }
+        
+        for (let n = 1; n <= N; n++) {
+            let start = y + n * L;
+            let end = x + n * L;
+            
+            if (idx === start) {
+                return n % 2 === 1 ? '#00BFFF' : '#EEB422';
+            }
+            
+            if (idx > start && idx < end) {
+                return n % 2 === 1 ? '#00BFFF' : '#EEB422';
+            }
+        }
+        
+        return '#999';
+    }
+
+    function drawMountain(svgId, matrixData, colorInfo = null, scale = 1.0) {
+        const svg = document.getElementById(svgId);
+        if (!matrixData || matrixData.length === 0) return;
+
+        const cellWidth = 50 * scale;
+        const rowHeight = 60 * scale;
+        const leftPadding = 60 * scale;
+        const verticalMargin = 15 * scale;
+        const numRows = matrixData.length;
+        const maxCols = Math.max(...matrixData.map(d => d.seq.length));
+
+        const width = maxCols * cellWidth + leftPadding + 20 * scale;
+        const height = verticalMargin * 2 + (numRows - 1) * rowHeight;
+
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        svg.innerHTML = '';
+
+        for (let r = 0; r < numRows; r++) {
+            const rowData = matrixData[r];
+            const y = height - verticalMargin - r * rowHeight;
+            const isTopRow = (r === numRows - 1);
+
+            for (let i = 0; i < rowData.seq.length; i++) {
+                const x = leftPadding + i * cellWidth;
+                const value = rowData.seq[i];
+                const parentIdx = rowData.parents[i];
+
+                let color = '#333';
+                if (!isTopRow && colorInfo) {
+                    color = getColorForIndex(i, colorInfo.y, colorInfo.x, colorInfo.L, colorInfo.N, colorInfo.specialPositions, r);
+                }
+
+                if (!isTopRow) {
+                    const upperY = y - rowHeight;
+                    
+                    const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line1.setAttribute('x1', x);
+                    line1.setAttribute('y1', y - 10 * scale);
+                    line1.setAttribute('x2', x);
+                    line1.setAttribute('y2', upperY + 10 * scale);
+                    line1.setAttribute('stroke', color);
+                    line1.setAttribute('stroke-width', 1.5 * scale);
+                    svg.insertBefore(line1, svg.firstChild);
+
+                    if (parentIdx !== -1) {
+                        const parentX = leftPadding + parentIdx * cellWidth;
+                        const parentY = y;
+                        
+                        const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line2.setAttribute('x1', x);
+                        line2.setAttribute('y1', upperY + 10 * scale);
+                        line2.setAttribute('x2', parentX);
+                        line2.setAttribute('y2', parentY - 10 * scale);
+                        line2.setAttribute('stroke', color);
+                        line2.setAttribute('stroke-width', 1.5 * scale);
+                        svg.insertBefore(line2, svg.firstChild);
+                    }
+                }
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', x);
+                text.setAttribute('y', y);
+                text.setAttribute('text-anchor', 'middle');
+                                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('font-size', 14 * scale);
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', color);
+                text.textContent = value;
+                svg.appendChild(text);
+            }
+
+            const rowLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            rowLabel.setAttribute('x', 10 * scale);
+            rowLabel.setAttribute('y', y);
+            rowLabel.setAttribute('text-anchor', 'start');
+            rowLabel.setAttribute('dominant-baseline', 'middle');
+            rowLabel.setAttribute('font-size', 12 * scale);
+            rowLabel.setAttribute('fill', '#999');
+            rowLabel.textContent = `Row ${r}`;
+            svg.appendChild(rowLabel);
+        }
+    }
+
+    function checkStandard() {
+        const seqStr = document.getElementById('sequence').value;
+        const standardResultDiv = document.getElementById('standard-result');
+        
+        standardResultDiv.style.display = 'block';
+        standardResultDiv.innerHTML = '';
+        
+        try {
+            const originalSeq = parseSequence(seqStr);
+            
+            if (originalSeq.length < 2) {
+                throw new Error("序列长度必须至少为2");
+            }
+            
+            let processSteps = [];
+            
+            if (originalSeq.length === 2 && originalSeq[0] === 1) {
+                processSteps.push(`[${originalSeq.join(',')}] 只有两项且第一项是1`);
+                processSteps.push(`<span class="success">✓ 是标准式</span>`);
+                standardResultDiv.innerHTML = `<div class="standard-process">${processSteps.join(' → ')}</div>`;
+                return;
+            }
+            
+            if (originalSeq[0] !== 1) {
+                processSteps.push(`[${originalSeq.join(',')}] 第一项不是1`);
+                processSteps.push(`<span class="error">✗ 不是标准式</span>`);
+                standardResultDiv.innerHTML = `<div class="standard-process">${processSteps.join(' → ')}</div>`;
+                return;
+            }
+            
+            let currentSeq = [1, originalSeq[1] + 1];
+            let checkIndex = 2;
+            
+            let maxSteps = 1000;
+            let stepCount = 0;
+            
+            while (checkIndex <= originalSeq.length && stepCount < maxSteps) {
+                stepCount++;
+                
+                let targetLen = checkIndex;
+                let n = Math.max(1, targetLen - currentSeq.length + 5);
+                
+                let process = new ExpansionProcess(currentSeq, n, false);
+                let result = process.run();
+                let expanded = result.result;
+                
+                let truncated = expanded.slice(0, checkIndex);
+                
+                if (truncated.length < checkIndex) {
+                    throw new Error(`展开长度不足: ${truncated.length} < ${checkIndex}`);
+                }
+                
+                let lastVal = truncated[checkIndex - 1];
+                let targetVal = originalSeq[checkIndex - 1];
+                
+                if (lastVal < targetVal) {
+                    processSteps.push(`[${currentSeq.join(',')}] → [${truncated.join(',')}]`);
+                    processSteps.push(`位置${checkIndex-1}: ${lastVal} < ${targetVal}`);
+                    processSteps.push(`<span class="error">✗ 不是标准式</span>`);
+                    standardResultDiv.innerHTML = `<div class="standard-process">${processSteps.join('<br>')}</div>`;
+                    return;
+                } else if (lastVal === targetVal) {
+                    if (checkIndex === originalSeq.length) {
+                        processSteps.push(`[${currentSeq.join(',')}] → [${truncated.join(',')}]`);
+                        processSteps.push(`<span class="success">✓ 是标准式，来源于 [${currentSeq.join(',')}]</span>`);
+                        standardResultDiv.innerHTML = `<div class="standard-process">${processSteps.join('<br>')}</div>`;
+                        return;
+                    }
+                    checkIndex++;
+                } else {
+                    processSteps.push(`[${currentSeq.join(',')}] → [${truncated.join(',')}]`);
+                    currentSeq = originalSeq.slice(0, checkIndex - 1);
+                    currentSeq.push(targetVal + 1);
+                }
+            }
+            
+            if (stepCount >= maxSteps) {
+                throw new Error("检查步骤过多，可能存在问题");
+            }
+            
+        } catch (e) {
+            standardResultDiv.innerHTML = `<span class="error">错误: ${e.message}</span>`;
+            console.error(e);
+        }
+    }
+
+    function stopPendingCalculation() {
+        calculationVersion++;
+        clearTimeout(calculationTimer);
+        calculationTimer = null;
+        if (noLiftWorker) noLiftWorker.terminate();
+        noLiftWorker = null;
+        document.getElementById('cancel-calculation').hidden = true;
+    }
+
+    function clearExpansion() {
+        currentData = null;
+        document.getElementById('final-result').textContent = '';
+        document.getElementById('standard-result').style.display = 'none';
+        for (const id of ['mountain-before', 'mountain-after']) {
+            const svg = document.getElementById(id);
+            svg.replaceChildren();
+            svg.setAttribute('width', 0);
+            svg.setAttribute('height', 0);
+        }
+    }
+
+    function cancelCalculation() {
+        stopPendingCalculation();
+        clearExpansion();
+        document.getElementById('calculation-status').textContent = '计算已停止。修改输入或切换模式可重新计算。';
+    }
+
+    function showExpansionError(message) {
+        clearExpansion();
+        const error = document.createElement('span');
+        error.className = 'error';
+        error.textContent = message;
+        document.getElementById('final-result').appendChild(error);
+        document.getElementById('calculation-status').textContent = '计算未完成';
+    }
+
+    function renderExpansion(data) {
+        currentData = data;
+        const colorInfo = data.badRootIndex !== -1 ? {
+            y: data.badRootIndex, x: data.originalLastIndex, L: data.badPartLength,
+            N: data.n, specialPositions: data.specialPositions
+        } : null;
+        const finalResultDiv = document.getElementById('final-result');
+        let resultHTML = '';
+        data.result.forEach((val, idx) => {
+            const color = colorInfo ? getColorForIndex(idx, colorInfo.y, colorInfo.x, colorInfo.L, colorInfo.N, colorInfo.specialPositions, 0) : '#333';
+            resultHTML += '<span class="num" style="color: ' + color + ';" onclick="truncateSequence(' + idx + ')" title="点击截取到此处">' + val + '</span>';
+            if (idx < data.result.length - 1) resultHTML += ',';
+        });
+        finalResultDiv.innerHTML = resultHTML;
+        drawMountain('mountain-before', data.matrixBefore, colorInfo, currentScale);
+        if (data.matrixAfter) drawMountain('mountain-after', data.matrixAfter, colorInfo, currentScale);
+        document.getElementById('calculation-status').textContent = data.noLiftStatus
+            ? (data.noLiftStatus === 'accepted' ? '无提升(1,4,9,13,9提升)展开完成' : '无提升(1,4,9,13,9提升)检查完成，本次与普通展开相同')
+            : (data.mode === 'i-mode' ? '无提升展开完成' : '普通展开完成');
+    }
+
+    function calculateExpansion() {
+        stopPendingCalculation();
+        clearExpansion();
+        const version = calculationVersion;
+        const seqStr = document.getElementById('sequence').value;
+        const nText = document.getElementById('repetitions').value;
+        const nVal = Number(nText);
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        document.getElementById('output').style.display = 'block';
+        try {
+            const seq = parseSequence(seqStr);
+            if (seq.length < 2) throw new Error('序列长度必须至少为2');
+            if (seq[0] !== 1) throw new Error('0-Y 表达式首项必须是 1');
+            if (!nText.trim() || !Number.isSafeInteger(nVal) || nVal < 1) throw new Error('复制次数 N 必须是正安全整数');
+            if (mode !== 'direct-i-mode') {
+                const data = new ExpansionProcess(seq, nVal, mode === 'i-mode').run();
+                data.n = nVal;
+                data.mode = mode;
+                renderExpansion(data);
+                return;
+            }
+            document.getElementById('calculation-status').textContent = '正在计算无提升(1,4,9,13,9提升)…';
+            document.getElementById('cancel-calculation').hidden = false;
+            // Debounce typing. Terminate a previous worker before accepting a new input.
+            calculationTimer = setTimeout(() => {
+                calculationTimer = null;
+                if (version !== calculationVersion) return;
+                let url;
+                try {
+                    const workerSource = document.getElementById('core-source').textContent + '\n' + document.getElementById('nolift-worker-source').textContent;
+                    url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+                    const worker = new Worker(url);
+                    URL.revokeObjectURL(url);
+                    url = null;
+                    noLiftWorker = worker;
+                    worker.onmessage = event => {
+                        if (version !== calculationVersion || worker !== noLiftWorker) return;
+                        worker.terminate();
+                        noLiftWorker = null;
+                        document.getElementById('cancel-calculation').hidden = true;
+                        if (event.data.error) showExpansionError(event.data.error);
+                        else {
+                            try { renderExpansion(event.data.data); }
+                            catch (error) { showExpansionError(error.message); }
+                        }
+                    };
+                    worker.onerror = event => {
+                        if (version !== calculationVersion || worker !== noLiftWorker) return;
+                        worker.terminate();
+                        noLiftWorker = null;
+                        document.getElementById('cancel-calculation').hidden = true;
+                        showExpansionError(event.message || '后台计算失败，请重新打开此 HTML 文件。');
+                    };
+                    worker.postMessage({ sequence: seq, n: nVal });
+                } catch (error) {
+                    if (url) URL.revokeObjectURL(url);
+                    if (noLiftWorker) noLiftWorker.terminate();
+                    noLiftWorker = null;
+                    document.getElementById('cancel-calculation').hidden = true;
+                    showExpansionError(error.message);
+                }
+            }, 150);
+        } catch (error) {
+            showExpansionError(error.message);
+        }
+    }
+
+    calculateExpansion();
+</script>
+
+</body>
+</html>
